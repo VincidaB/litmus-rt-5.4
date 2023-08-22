@@ -1,6 +1,7 @@
 #include <linux/module.h>
 #include <linux/percpu.h>
 #include <linux/sched.h>
+
 #include <litmus/litmus.h>
 #include <litmus/budget.h>
 #include <litmus/edf_common.h>
@@ -128,7 +129,9 @@ static long p_edf_deactivate_plugin(void)
 }
 
 
-
+/**
+ * Function called 
+*/
 static struct task_struct* p_edf_schedule(struct task_struct * prev)
 {
         struct p_edf_cpu_state *local_state = local_cpu_state();
@@ -248,8 +251,8 @@ static void p_edf_task_exit(struct task_struct *tsk)
         raw_spin_lock_irqsave(&state->local_queues.ready_lock, flags);
         rt_domain_t*		edf;
 
-        /* For simplicity, we assume here that the task is no longer queued anywhere else. This
-         * is the case when tasks exit by themselves; additional queue management is
+        /* For simplicity, we assume here that the task is no longer queued anywhere else. 
+         * This is the case when tasks exit by themselves; additional queue management is
          * is required if tasks are forced out of real-time mode by other tasks. */
      
         if (is_queued(tsk)){

@@ -260,7 +260,13 @@ int register_sched_plugin(struct sched_plugin* plugin)
 }
 
 
-/* FIXME: reference counting, etc. */
+/**
+ * @param name is the null-terminated string to find the corresponding plugin
+ * 
+ * @return A poiter to the found plugin or NULL if no matching plugin is found
+ * 
+ * TODO FIXME: reference counting, etc. 
+*/
 struct sched_plugin* find_sched_plugin(const char* name)
 {
 	struct list_head *pos;
@@ -269,7 +275,7 @@ struct sched_plugin* find_sched_plugin(const char* name)
 	raw_spin_lock(&sched_plugins_lock);
 	list_for_each(pos, &sched_plugins) {
 		plugin = list_entry(pos, struct sched_plugin, list);
-		if (!strcmp(plugin->plugin_name, name))
+		if (!strcmp(plugin->plugin_name, name)) //strcmp returns 0 if str are =			
 		    goto out_unlock;
 	}
 	plugin = NULL;
