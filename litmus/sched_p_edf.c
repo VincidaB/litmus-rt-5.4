@@ -270,9 +270,6 @@ static void p_edf_task_exit(struct task_struct *tsk)
 
 /* Called when the state of tsk changes back to TASK_RUNNING.
  * We need to requeue the task.
- *
- * NOTE: If a sporadic task is suspended for a long time,
- * this might actually be an event-driven release of a new job.
  */
 static void p_edf_task_resume(struct task_struct  *tsk)
 {

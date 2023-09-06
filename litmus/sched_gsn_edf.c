@@ -431,7 +431,7 @@ static struct task_struct* gsnedf_schedule(struct task_struct * prev)
 	blocks      = exists && !is_current_running();
 	out_of_time = exists && budget_enforced(entry->scheduled)
 		&& budget_exhausted(entry->scheduled);
-	np 	    = exists && is_np(entry->scheduled);
+	np 	    = exists && is_np(entry->scheduled); // non premptible ? 
 	sleep	    = exists && is_completed(entry->scheduled);
 	preempt     = entry->scheduled != entry->linked;
 

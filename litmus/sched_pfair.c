@@ -723,10 +723,10 @@ static struct task_struct* pfair_schedule(struct task_struct * prev)
 	sched_state_task_picked();
 	raw_spin_unlock(cpu_lock(state));
 
-	if (next)
+	if (next) // if next task is not NULL
 		TRACE_TASK(next, "scheduled rel=%lu at %lu (%llu)\n",
 			   tsk_pfair(next)->release, cpu_cluster(state)->pfair_time, litmus_clock());
-	else if (is_realtime(prev))
+	else if (is_realtime(prev)) // if there is no next task and the last one was a realtime task,
 		TRACE("Becomes idle at %lu (%llu)\n", cpu_cluster(state)->pfair_time, litmus_clock());
 
 #ifdef CONFIG_RELEASE_MASTER
@@ -937,8 +937,8 @@ static long pfair_admit_task(struct task_struct* t)
 	 * (Ceiling of exec cost, floor of period.)
 	 */
 
-	quanta = get_exec_cost(t);
-	period = get_rt_period(t);
+	// quanta = get_exec_cost(t); 
+	period = get_rt_period(t); 
 
 	quanta = time2quanta(get_exec_cost(t), CEIL);
 
@@ -1179,16 +1179,16 @@ static long pfair_deactivate_plugin(void)
 
 /*	Plugin object	*/
 static struct sched_plugin pfair_plugin __cacheline_aligned_in_smp = {
-	.plugin_name		= "PFAIR",
-	.task_new		= pfair_task_new,
-	.task_exit		= pfair_task_exit,
-	.schedule		= pfair_schedule,
-	.task_wake_up		= pfair_task_wake_up,
-	.task_block		= pfair_task_block,
-	.admit_task		= pfair_admit_task,
-	.complete_job		= complete_job,
-	.activate_plugin	= pfair_activate_plugin,
-	.deactivate_plugin	= pfair_deactivate_plugin,
+	.plugin_name			= "PFAIR",
+	.task_new				= pfair_task_new,
+	.task_exit				= pfair_task_exit,
+	.schedule				= pfair_schedule,
+	.task_wake_up			= pfair_task_wake_up,
+	.task_block				= pfair_task_block,
+	.admit_task				= pfair_admit_task,
+	.complete_job			= complete_job,
+	.activate_plugin		= pfair_activate_plugin,
+	.deactivate_plugin		= pfair_deactivate_plugin,
 	.get_domain_proc_info	= pfair_get_domain_proc_info,
 };
 

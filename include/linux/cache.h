@@ -57,7 +57,7 @@
 #endif /* CONFIG_SMP */
 #endif
 
-/*
+/*	
  * The maximum alignment needed for some critical structures
  * These could be inter-node cacheline sizes/L3 cacheline
  * size etc.  Define this in asm/cache.h for your arch
