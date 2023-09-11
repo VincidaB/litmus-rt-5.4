@@ -716,8 +716,10 @@ static struct task_struct* pfair_schedule(struct task_struct * prev)
 		next = state->local;
 
 	if (prev != next) {
-		tsk_rt(prev)->scheduled_on = NO_CPU;
-		if (next)
+		tsk_rt(prev)->scheduled_on = NO_CPU; // The old taks it replaces in now
+											// scheduled on no processor
+		if (next)	// If we have a next task (if next == NULL,
+					// we are just stopping the execution of prev)
 			tsk_rt(next)->scheduled_on = cpu_id(state);
 	}
 	sched_state_task_picked();

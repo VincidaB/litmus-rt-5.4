@@ -116,6 +116,9 @@ static inline lt_t litmus_clock(void)
 #define earlier_release(a, b)  (lt_before(\
 	(a)->rt_param.job_params.release,\
 	(b)->rt_param.job_params.release))
+#define shorter_exec_time(a, b) (\
+	(get_rt_period(a) < get_rt_period(b)) ? 1 : 0)
+
 
 void preempt_if_preemptable(struct task_struct* t, int on_cpu);
 
