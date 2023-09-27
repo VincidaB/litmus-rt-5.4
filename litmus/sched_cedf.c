@@ -523,6 +523,7 @@ static void cedf_finish_switch(struct task_struct *prev)
 	cpu_entry_t* 	entry = this_cpu_ptr(&cedf_cpu_entries);
 
 	entry->scheduled = is_realtime(current) ? current : NULL;
+
 #ifdef WANT_ALL_SCHED_EVENTS
 	TRACE_TASK(prev, "switched away from\n");
 #endif
@@ -630,6 +631,10 @@ static void cedf_task_exit(struct task_struct * t)
         TRACE_TASK(t, "RIP\n");
 }
 
+/**
+ * Admiting tasks, here every task is admited as long as it is in the corect
+ * cluster
+*/
 static long cedf_admit_task(struct task_struct* tsk)
 {
 	return (remote_cluster(task_cpu(tsk)) == task_cpu_cluster(tsk)) ?
@@ -673,7 +678,9 @@ static long cedf_get_domain_proc_info(struct domain_proc_info **ret)
 	*ret = &cedf_domain_proc_info;
 	return 0;
 }
-
+/**
+ * Called after the plugin just got activated
+*/
 static void cedf_setup_domain_proc(void)
 {
 	int i, cpu, domain;
@@ -716,6 +723,11 @@ static void cedf_setup_domain_proc(void)
 	}
 }
 
+
+/**
+ * Function called when the plugin is activated
+ * For example, when using ./liblitmus/setsched C-EDF
+*/
 static long cedf_activate_plugin(void)
 {
 	int i, j, cpu, ccpu, cpu_count;
@@ -734,6 +746,7 @@ static long cedf_activate_plugin(void)
 	if(!zalloc_cpumask_var(&mask, GFP_ATOMIC))
 		return -ENOMEM;
 
+	// Couldn't get any other cluster than the global one working
 	if (cluster_config == GLOBAL_CLUSTER) {
 		cluster_size = num_online_cpus();
 	} else {
@@ -751,6 +764,7 @@ static long cedf_activate_plugin(void)
 		cluster_size = cpumask_weight(mask);
 	}
 
+					// **the error I now get**
 	if ((num_online_cpus() % cluster_size) != 0) {
 		/* this can't be right, some cpus are left out */
 		printk(KERN_ERR "C-EDF: Trying to group %d cpus in %d!\n",
@@ -782,6 +796,7 @@ static long cedf_activate_plugin(void)
 	}
 
 	/* cycle through cluster and add cpus to them */
+	// this seams to actually build the cluster variables
 	for (i = 0; i < num_clusters; i++) {
 
 		for_each_online_cpu(cpu) {
