@@ -13,44 +13,44 @@
 #include <litmus/sched_plugin.h>
 #include <litmus/sched_trace.h>
 
-struct fpf_cpu_state {
+struct p_rm_cpu_state {
         rt_domain_t local_queues;
         int cpu;
         struct task_struct* scheduled;
 };
 
-static DEFINE_PER_CPU(struct fpf_cpu_state, fpf_cpu_state);
+static DEFINE_PER_CPU(struct p_rm_cpu_state, p_rm_cpu_state);
 
-#define cpu_state_for(cpu_id)   (&per_cpu(fpf_cpu_state, cpu_id))
-#define local_cpu_state()       (this_cpu_ptr(&fpf_cpu_state))
-#define remote_edf(cpu)		(&per_cpu(fpf_cpu_state, cpu).local_queues)
-#define remote_pedf(cpu)	(&per_cpu(fpf_cpu_state, cpu))
+#define cpu_state_for(cpu_id)   (&per_cpu(p_rm_cpu_state, cpu_id))
+#define local_cpu_state()       (this_cpu_ptr(&p_rm_cpu_state))
+#define remote_edf(cpu)		(&per_cpu(p_rm_cpu_state, cpu).local_queues)
+#define remote_pedf(cpu)	(&per_cpu(p_rm_cpu_state, cpu))
 #define task_edf(task)		remote_edf(get_partition(task))
 
-static struct domain_proc_info fpf_domain_proc_info;
+static struct domain_proc_info p_rm_domain_proc_info;
 
-static long fpf_get_domain_proc_info(struct domain_proc_info **ret)
+static long p_rm_get_domain_proc_info(struct domain_proc_info **ret)
 {
-        *ret = &fpf_domain_proc_info;
+        *ret = &p_rm_domain_proc_info;
         return 0;
 }
 
-static void fpf_setup_domain_proc(void)
+static void p_rm_setup_domain_proc(void)
 {
         int i, cpu;
         int num_rt_cpus = num_online_cpus();
 
         struct cd_mapping *cpu_map, *domain_map;
 
-        memset(&fpf_domain_proc_info, 0, sizeof(fpf_domain_proc_info));
-        init_domain_proc_info(&fpf_domain_proc_info, num_rt_cpus, num_rt_cpus);
-        fpf_domain_proc_info.num_cpus = num_rt_cpus;
-        fpf_domain_proc_info.num_domains = num_rt_cpus;
+        memset(&p_rm_domain_proc_info, 0, sizeof(p_rm_domain_proc_info));
+        init_domain_proc_info(&p_rm_domain_proc_info, num_rt_cpus, num_rt_cpus);
+        p_rm_domain_proc_info.num_cpus = num_rt_cpus;
+        p_rm_domain_proc_info.num_domains = num_rt_cpus;
 
         i = 0;
         for_each_online_cpu(cpu) {
-                cpu_map = &fpf_domain_proc_info.cpu_to_domains[i];
-                domain_map = &fpf_domain_proc_info.domain_to_cpus[i];
+                cpu_map = &p_rm_domain_proc_info.cpu_to_domains[i];
+                domain_map = &p_rm_domain_proc_info.domain_to_cpus[i];
 
                 cpu_map->id = cpu;
                 domain_map->id = i;
@@ -62,7 +62,7 @@ static void fpf_setup_domain_proc(void)
 
 /* This helper is called when task `prev` exhausted its budget or when
  * it signaled a job completion. */
-static void fpf_job_completion(struct task_struct *prev, int budget_exhausted)
+static void p_rm_job_completion(struct task_struct *prev, int budget_exhausted)
 {
         sched_trace_task_completion(prev, budget_exhausted);
 	TRACE_TASK(prev, "job_completion(forced=%d).\n", budget_exhausted);
@@ -75,7 +75,7 @@ static void fpf_job_completion(struct task_struct *prev, int budget_exhausted)
 
 /* Add the task `tsk` to the appropriate queue. Assumes the caller holds the ready lock.
  */
-static void fpf_requeue(struct task_struct *tsk, struct fpf_cpu_state *cpu_state)
+static void p_rm_requeue(struct task_struct *tsk, struct p_rm_cpu_state *cpu_state)
 {
         if (is_released(tsk, litmus_clock())) {
                 /* Uses __add_ready() instead of add_ready() because we already
@@ -89,9 +89,9 @@ static void fpf_requeue(struct task_struct *tsk, struct fpf_cpu_state *cpu_state
         }
 }
 
-static int fpf_check_for_preemption_on_release(rt_domain_t *local_queues)
+static int p_rm_check_for_preemption_on_release(rt_domain_t *local_queues)
 {
-        struct fpf_cpu_state *state = container_of(local_queues, struct fpf_cpu_state,
+        struct p_rm_cpu_state *state = container_of(local_queues, struct p_rm_cpu_state,
                                                     local_queues);
 
         /* Because this is a callback from rt_domain_t we already hold
@@ -104,27 +104,27 @@ static int fpf_check_for_preemption_on_release(rt_domain_t *local_queues)
         return 0;
 }
 
-static long fpf_activate_plugin(void)
+static long p_rm_activate_plugin(void)
 {
         int cpu;
-        struct fpf_cpu_state *state;
+        struct p_rm_cpu_state *state;
         for_each_online_cpu(cpu) {
                 TRACE("Initializing CPU%d...\n", cpu);
                 state = cpu_state_for(cpu);
                 state->cpu = cpu;
                 state->scheduled = NULL;
                 rm_domain_init(&state->local_queues,
-                                fpf_check_for_preemption_on_release,
+                                p_rm_check_for_preemption_on_release,
                                 NULL);
         }
 
-        fpf_setup_domain_proc();
+        p_rm_setup_domain_proc();
         return 0;
 }
 
-static long fpf_deactivate_plugin(void)
+static long p_rm_deactivate_plugin(void)
 {
-        destroy_domain_proc_info(&fpf_domain_proc_info);
+        destroy_domain_proc_info(&p_rm_domain_proc_info);
         return 0;
 }
 
@@ -132,9 +132,9 @@ static long fpf_deactivate_plugin(void)
 /**
  * Function called 
 */
-static struct task_struct* fpf_schedule(struct task_struct * prev)
+static struct task_struct* p_rm_schedule(struct task_struct * prev)
 {
-        struct fpf_cpu_state *local_state = local_cpu_state();
+        struct p_rm_cpu_state *local_state = local_cpu_state();
 
         /* next == NULL means "schedule background work". */
         struct task_struct *next = NULL;
@@ -166,7 +166,7 @@ static struct task_struct* fpf_schedule(struct task_struct * prev)
 
         /* also check for (in-)voluntary job completions */
         if (out_of_time || job_completed) {
-                fpf_job_completion(prev, out_of_time);
+                p_rm_job_completion(prev, out_of_time);
                 resched = 1;
         }
 
@@ -175,7 +175,7 @@ static struct task_struct* fpf_schedule(struct task_struct * prev)
                  * queue, which it does if it did not self_suspend.
                  */
                 if (exists && !self_suspends) {
-                        fpf_requeue(prev, local_state);
+                        p_rm_requeue(prev, local_state);
                 }
                 next = __take_ready(&local_state->local_queues);
         } else {
@@ -201,18 +201,18 @@ static struct task_struct* fpf_schedule(struct task_struct * prev)
         return next;
 }
 
-static long fpf_admit_task(struct task_struct *tsk)
+static long p_rm_admit_task(struct task_struct *tsk)
 {
-        TRACE_TASK(tsk, "accepted by FPF plugin.\n");
+        TRACE_TASK(tsk, "accepted by p_rm plugin.\n");
         return 0;
 }
 
 
 
-static void fpf_task_exit(struct task_struct *tsk)
+static void p_rm_task_exit(struct task_struct *tsk)
 {
         unsigned long flags;
-        struct fpf_cpu_state *state = cpu_state_for(get_partition(tsk));
+        struct p_rm_cpu_state *state = cpu_state_for(get_partition(tsk));
         raw_spin_lock_irqsave(&state->local_queues.ready_lock, flags);
         rt_domain_t*		edf;
 
@@ -236,10 +236,10 @@ static void fpf_task_exit(struct task_struct *tsk)
 /* Called when the state of tsk changes back to TASK_RUNNING.
  * We need to requeue the task.
  */
-static void fpf_task_resume(struct task_struct  *tsk)
+static void p_rm_task_resume(struct task_struct  *tsk)
 {
         unsigned long flags;
-        struct fpf_cpu_state *state = cpu_state_for(get_partition(tsk));
+        struct p_rm_cpu_state *state = cpu_state_for(get_partition(tsk));
         lt_t now;
         TRACE_TASK(tsk, "wake_up at %llu\n", litmus_clock());
         raw_spin_lock_irqsave(&state->local_queues.ready_lock, flags);
@@ -259,7 +259,7 @@ static void fpf_task_resume(struct task_struct  *tsk)
          * race with the call to schedule(). */
         if (state->scheduled != tsk) {
                 TRACE_TASK(tsk, "is being reqeued\n");
-                fpf_requeue(tsk, state);
+                p_rm_requeue(tsk, state);
                 if (rm_preemption_needed(&state->local_queues, state->scheduled)) {
                         preempt_if_preemptable(state->scheduled, state->cpu);
                 }
@@ -269,21 +269,21 @@ static void fpf_task_resume(struct task_struct  *tsk)
 }
 
 
-static struct sched_plugin fpf_plugin = {
-        .plugin_name            = "FPF",
-        .schedule               = fpf_schedule,
-        .task_wake_up           = fpf_task_resume,
-        .admit_task             = fpf_admit_task,
-        .task_exit              = fpf_task_exit,
-        .get_domain_proc_info   = fpf_get_domain_proc_info,
-        .activate_plugin        = fpf_activate_plugin,
-        .deactivate_plugin      = fpf_deactivate_plugin,
+static struct sched_plugin p_rm_plugin = {
+        .plugin_name            = "P-RM",
+        .schedule               = p_rm_schedule,
+        .task_wake_up           = p_rm_task_resume,
+        .admit_task             = p_rm_admit_task,
+        .task_exit              = p_rm_task_exit,
+        .get_domain_proc_info   = p_rm_get_domain_proc_info,
+        .activate_plugin        = p_rm_activate_plugin,
+        .deactivate_plugin      = p_rm_deactivate_plugin,
         .complete_job           = complete_job,
 };
 
-static int __init init_fpf(void)
+static int __init init_p_rm(void)
 {
-        return register_sched_plugin(&fpf_plugin);
+        return register_sched_plugin(&p_rm_plugin);
 }
 
-module_init(init_fpf);
+module_init(init_p_rm);
